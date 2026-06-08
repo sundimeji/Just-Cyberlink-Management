@@ -46,6 +46,8 @@
 
         .container {
             max-width: 1400px;
+            padding: 0 1rem;
+            width: 100%;
         }
 
         .card {
@@ -61,17 +63,16 @@
         }
 
         .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 15px 15px 0 0;
-            padding: 1rem 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
         }
 
-        .card-header:hover {
-            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        .card-header button {
+            margin-top: 0.5rem;
         }
 
         .card-header i {
@@ -199,53 +200,58 @@
         }
 
         .plaza-list {
-            max-height: 600px;
-            overflow-y: auto;
-            padding-right: 10px;
+            max-height: 100%;
         }
 
-        .plaza-list::-webkit-scrollbar {
-            width: 8px;
+        .table-responsive {
+            overflow-x: auto;
         }
 
-        .plaza-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
+        @media (max-width: 992px) {
+            .stats-card {
+                padding: 1.25rem;
+            }
 
-        .plaza-list::-webkit-scrollbar-thumb {
-            background: var(--primary-color);
-            border-radius: 10px;
-        }
-
-        .add-plaza-btn {
-            background: linear-gradient(135deg, var(--success-color), #059669);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 12px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .add-plaza-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(16,185,129,0.3);
-        }
-
-        .modal-content {
-            border-radius: 15px;
+            .navbar-brand {
+                font-size: 1.25rem;
+            }
         }
 
         @media (max-width: 768px) {
+            .card-header {
+                justify-content: center;
+                text-align: center;
+            }
+
+            .card-header button {
+                width: 100%;
+                margin-top: 0.75rem;
+            }
+
             .stats-card h3 {
-                font-size: 1.5rem;
+                font-size: 1.6rem;
             }
+
             .table-responsive {
-                font-size: 0.8rem;
+                font-size: 0.85rem;
             }
+
             .plaza-list {
-                max-height: 400px;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+
+            .stats-card {
+                padding: 1rem;
+            }
+
+            .action-buttons i {
+                margin: 0 3px;
             }
         }
     </style>
