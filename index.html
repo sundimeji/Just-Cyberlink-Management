@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Just - Cyberlink Customer Management - Organized by Plaza</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --dark-bg: #1f2937;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: var(--dark-bg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white !important;
+        }
+
+        .navbar-brand i {
+            margin-right: 10px;
+        }
+
+        .container {
+            max-width: 1400px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 15px 15px 0 0;
+            padding: 1rem 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        }
+
+        .card-header i {
+            margin-right: 10px;
+        }
+
+        .plaza-stats {
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 10px;
+            padding: 10px 30px;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37,99,235,0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            border-radius: 10px;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .stats-card i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+        }
+
+        .stats-card h3 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .stats-card p {
+            margin: 0;
+            color: #6b7280;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e5e7eb;
+            color: #374151;
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: var(--success-color);
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        .badge-inactive {
+            background: var(--danger-color);
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        .badge-pending {
+            background: var(--warning-color);
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        .action-buttons i {
+            cursor: pointer;
+            margin: 0 5px;
+            transition: color 0.3s ease;
+        }
+
+        .action-buttons i:hover {
+            opacity: 0.7;
+        }
+
+        .fa-edit {
+            color: var(--warning-color);
+        }
+
+        .fa-trash {
+            color: var(--danger-color);
+        }
+
+        .plaza-list {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .plaza-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .plaza-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .plaza-list::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        .add-plaza-btn {
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .add-plaza-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16,185,129,0.3);
+        }
+
+        .modal-content {
+            border-radius: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-card h3 {
+                font-size: 1.5rem;
+            }
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            .plaza-list {
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-building"></i>
+                Just-Cyberlink Customer Management
+            </a>
+            <div>
+                <span class="text-light">
+                    <i class="fas fa-user-check"></i> Admin Panel
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Global Stats Dashboard -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>Total Plazas</p>
+                            <h3 id="totalPlazas">0</h3>
+                        </div>
+                        <i class="fas fa-building"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>Total Customers</p>
+                            <h3 id="totalCustomers">0</h3>
+                        </div>
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>Active Connections</p>
+                            <h3 id="activeCustomers">0</h3>
+                        </div>
+                        <i class="fas fa-wifi"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>Monthly Revenue</p>
+                            <h3 id="totalRevenue">₦0</h3>
+                        </div>
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Plaza List Section -->
+            <div class="col-md-5 mb-4">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <i class="fas fa-store me-2"></i>
+                        All Plazas
+                        <button class="btn btn-sm btn-light float-end" onclick="showAddPlazaModal()" style="border-radius: 20px;">
+                            <i class="fas fa-plus"></i> Add Plaza
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="plaza-list" id="plazaList">
+                            <!-- Plazas will be loaded here -->
+                            <div class="text-center text-muted">Loading plazas...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Details Section -->
+            <div class="col-md-7 mb-4">
+                <div class="card">
+                    <div class="card-header" id="selectedPlazaHeader">
+                        <i class="fas fa-users me-2"></i>
+                        Select a Plaza to View Customers
+                    </div>
+                    <div class="card-body">
+                        <div id="selectedPlazaContent">
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-building fa-3x mb-3"></i>
+                                <p>Click on any plaza from the left to view and manage its customers</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <div class="modal fade" id="addCustomerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Add New Customer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="customerForm">
+                        <input type="hidden" id="currentPlazaId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Customer Name *</label>
+                                <input type="text" class="form-control" id="customerName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Shop Number *</label>
+                                <input type="text" class="form-control" id="shopNumber" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Customer Phone *</label>
+                                <input type="tel" class="form-control" id="customerPhone" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Internet Plan *</label>
+                                <select class="form-select" id="internetPlan" required>
+                                    <option value="">Select Plan</option>
+                                    <option value="Basic 10Mbps - ₦10,000">Basic 10Mbps - ₦10,000</option>
+                                    <option value="Standard 25Mbps - ₦20,000">Standard 25Mbps - ₦20,000</option>
+                                    <option value="Premium 50Mbps - ₦35,000">Premium 50Mbps - ₦35,000</option>
+                                    <option value="Ultimate 100Mbps - ₦50,000">Ultimate 100Mbps - ₦50,000</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date Connected *</label>
+                                <input type="date" class="form-control" id="dateConnect" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Due Date *</label>
+                                <input type="date" class="form-control" id="dueDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status *</label>
+                                <select class="form-select" id="status" required>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Pending">Pending</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-2"></i>Save Customer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Plaza Modal -->
+    <div class="modal fade" id="addPlazaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-building"></i> Add New Plaza</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="plazaForm">
+                        <div class="mb-3">
+                            <label class="form-label">Plaza Name *</label>
+                            <input type="text" class="form-control" id="plazaName" required placeholder="e.g., City Mall, Plaza Hub">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Plaza Location (Optional)</label>
+                            <input type="text" class="form-control" id="plazaLocation" placeholder="Address or area">
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-save me-2"></i>Create Plaza
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Data structure: Plazas array with customers
+        let plazas = [];
+        let currentSelectedPlazaId = null;
+        let editCustomerIndex = -1;
+
+        // Load data from localStorage
+        function loadData() {
+            const stored = localStorage.getItem('ispPlazasData');
+            if (stored) {
+                plazas = JSON.parse(stored);
+            } else {
+                // Sample data
+                plazas = [
+                    {
+                        id: 1,
+                        name: "City Mall",
+                        location: "Downtown",
+                        customers: [
+                            {
+                                name: "John Doe",
+                                shopNumber: "A12",
+                                phone: "08012345678",
+                                plan: "Premium 50Mbps - ₦35,000",
+                                connectDate: "2024-01-15",
+                                dueDate: "2024-02-15",
+                                status: "Active"
+                            },
+                            {
+                                name: "Jane Smith",
+                                shopNumber: "B45",
+                                phone: "08087654321",
+                                plan: "Standard 25Mbps - ₦20,000",
+                                connectDate: "2024-01-10",
+                                dueDate: "2024-02-10",
+                                status: "Active"
+                            }
+                        ]
+                    },
+                    {
+                        id: 2,
+                        name: "Plaza Hub",
+                        location: "Business District",
+                        customers: [
+                            {
+                                name: "Mike Johnson",
+                                shopNumber: "C78",
+                                phone: "08098765432",
+                                plan: "Ultimate 100Mbps - ₦50,000",
+                                connectDate: "2023-12-20",
+                                dueDate: "2024-01-20",
+                                status: "Pending"
+                            }
+                        ]
+                    }
+                ];
+                saveData();
+            }
+            renderPlazaList();
+            updateGlobalStats();
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('ispPlazasData', JSON.stringify(plazas));
+        }
+
+        // Update global statistics
+        function updateGlobalStats() {
+            const totalPlazas = plazas.length;
+            let totalCustomers = 0;
+            let activeCustomers = 0;
+            let totalRevenue = 0;
+
+            plazas.forEach(plaza => {
+                totalCustomers += plaza.customers.length;
+                plaza.customers.forEach(customer => {
+                    if (customer.status === 'Active') activeCustomers++;
+                    const match = customer.plan.match(/₦([\d,]+)/);
+                    if (match) {
+                        totalRevenue += parseInt(match[1].replace(/,/g, ''));
+                    }
+                });
+            });
+
+            document.getElementById('totalPlazas').textContent = totalPlazas;
+            document.getElementById('totalCustomers').textContent = totalCustomers;
+            document.getElementById('activeCustomers').textContent = activeCustomers;
+            document.getElementById('totalRevenue').textContent = '₦' + totalRevenue.toLocaleString();
+        }
+
+        // Render plaza list
+        function renderPlazaList() {
+            const plazaListDiv = document.getElementById('plazaList');
+            if (plazas.length === 0) {
+                plazaListDiv.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-building fa-3x mb-3"></i>
+                        <p>No plazas added yet</p>
+                        <button class="btn btn-sm btn-success" onclick="showAddPlazaModal()">
+                            <i class="fas fa-plus"></i> Add First Plaza
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            plazaListDiv.innerHTML = plazas.map(plaza => `
+                <div class="card mb-3 plaza-card" onclick="selectPlaza(${plaza.id})" style="cursor: pointer;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">
+                                    <i class="fas fa-store"></i> ${escapeHtml(plaza.name)}
+                                </h5>
+                                ${plaza.location ? `<small class="text-muted"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(plaza.location)}</small>` : ''}
+                                <div class="mt-2">
+                                    <span class="badge bg-primary">${plaza.customers.length} Customers</span>
+                                    <span class="badge bg-success">${plaza.customers.filter(c => c.status === 'Active').length} Active</span>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deletePlaza(${plaza.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Select a plaza and show its customers
+        function selectPlaza(plazaId) {
+            currentSelectedPlazaId = plazaId;
+            const plaza = plazas.find(p => p.id === plazaId);
+            if (!plaza) return;
+
+            // Update header
+            document.getElementById('selectedPlazaHeader').innerHTML = `
+                <i class="fas fa-store me-2"></i>
+                ${escapeHtml(plaza.name)} - Customer Records
+                <button class="btn btn-sm btn-light float-end" onclick="showAddCustomerModal(${plazaId})">
+                    <i class="fas fa-plus"></i> Add Customer
+                </button>
+            `;
+
+            // Render customers table
+            if (plaza.customers.length === 0) {
+                document.getElementById('selectedPlazaContent').innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-users fa-3x mb-3"></i>
+                        <p>No customers in this plaza yet</p>
+                        <button class="btn btn-primary" onclick="showAddCustomerModal(${plazaId})">
+                            <i class="fas fa-plus"></i> Add First Customer
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            document.getElementById('selectedPlazaContent').innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Shop No</th>
+                                <th>Phone</th>
+                                <th>Plan</th>
+                                <th>Connected</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${plaza.customers.map((customer, idx) => {
+                                const statusClass = customer.status === 'Active' ? 'badge-active' : 
+                                                   (customer.status === 'Pending' ? 'badge-pending' : 'badge-inactive');
+                                const dueDate = new Date(customer.dueDate);
+                                const today = new Date();
+                                const isOverdue = dueDate < today && customer.status === 'Active';
+                                
+                                return `
+                                    <tr>
+                                        <td><strong>${escapeHtml(customer.name)}</strong></td>
+                                        <td>${escapeHtml(customer.shopNumber)}</td>
+                                        <td>${escapeHtml(customer.phone)}</td>
+                                        <td>${escapeHtml(customer.plan)}</td>
+                                        <td>${formatDate(customer.connectDate)}</td>
+                                        <td class="${isOverdue ? 'text-danger fw-bold' : ''}">
+                                            ${formatDate(customer.dueDate)}
+                                            ${isOverdue ? '<i class="fas fa-exclamation-triangle ms-1" title="Overdue"></i>' : ''}
+                                        </td>
+                                        <td><span class="${statusClass}">${customer.status}</span></td>
+                                        <td class="action-buttons">
+                                            <i class="fas fa-edit" onclick="editCustomerInPlaza(${plazaId}, ${idx})" title="Edit"></i>
+                                            <i class="fas fa-trash" onclick="deleteCustomerFromPlaza(${plazaId}, ${idx})" title="Delete"></i>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Show add customer modal
+        function showAddCustomerModal(plazaId) {
+            currentSelectedPlazaId = plazaId;
+            document.getElementById('currentPlazaId').value = plazaId;
+            document.getElementById('customerForm').reset();
+            editCustomerIndex = -1;
+            const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
+            modal.show();
+        }
+
+        // Add/Edit customer
+        document.getElementById('customerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const plazaId = parseInt(document.getElementById('currentPlazaId').value);
+            const plaza = plazas.find(p => p.id === plazaId);
+            
+            const customerData = {
+                name: document.getElementById('customerName').value,
+                shopNumber: document.getElementById('shopNumber').value,
+                phone: document.getElementById('customerPhone').value,
+                plan: document.getElementById('internetPlan').value,
+                connectDate: document.getElementById('dateConnect').value,
+                dueDate: document.getElementById('dueDate').value,
+                status: document.getElementById('status').value
+            };
+
+            if (editCustomerIndex === -1) {
+                plaza.customers.push(customerData);
+                showNotification('Customer added successfully!', 'success');
+            } else {
+                plaza.customers[editCustomerIndex] = customerData;
+                editCustomerIndex = -1;
+                showNotification('Customer updated successfully!', 'success');
+            }
+
+            saveData();
+            updateGlobalStats();
+            renderPlazaList();
+            selectPlaza(plazaId);
+            
+            bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
+        });
+
+        // Edit customer in plaza
+        function editCustomerInPlaza(plazaId, customerIndex) {
+            const plaza = plazas.find(p => p.id === plazaId);
+            const customer = plaza.customers[customerIndex];
+            
+            document.getElementById('currentPlazaId').value = plazaId;
+            document.getElementById('customerName').value = customer.name;
+            document.getElementById('shopNumber').value = customer.shopNumber;
+            document.getElementById('customerPhone').value = customer.phone;
+            document.getElementById('internetPlan').value = customer.plan;
+            document.getElementById('dateConnect').value = customer.connectDate;
+            document.getElementById('dueDate').value = customer.dueDate;
+            document.getElementById('status').value = customer.status;
+            
+            editCustomerIndex = customerIndex;
+            const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
+            modal.show();
+        }
+
+        // Delete customer from plaza
+        function deleteCustomerFromPlaza(plazaId, customerIndex) {
+            if (confirm('Are you sure you want to delete this customer?')) {
+                const plaza = plazas.find(p => p.id === plazaId);
+                plaza.customers.splice(customerIndex, 1);
+                saveData();
+                updateGlobalStats();
+                renderPlazaList();
+                selectPlaza(plazaId);
+                showNotification('Customer deleted successfully!', 'danger');
+            }
+        }
+
+        // Plaza management
+        function showAddPlazaModal() {
+            document.getElementById('plazaForm').reset();
+            const modal = new bootstrap.Modal(document.getElementById('addPlazaModal'));
+            modal.show();
+        }
+
+        document.getElementById('plazaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const newPlaza = {
+                id: Date.now(),
+                name: document.getElementById('plazaName').value,
+                location: document.getElementById('plazaLocation').value,
+                customers: []
+            };
+            
+            plazas.push(newPlaza);
+            saveData();
+            updateGlobalStats();
+            renderPlazaList();
+            
+            bootstrap.Modal.getInstance(document.getElementById('addPlazaModal')).hide();
+            showNotification('Plaza created successfully!', 'success');
+        });
+
+        function deletePlaza(plazaId) {
+            if (confirm('Are you sure you want to delete this plaza and all its customers?')) {
+                plazas = plazas.filter(p => p.id !== plazaId);
+                saveData();
+                updateGlobalStats();
+                renderPlazaList();
+                
+                if (currentSelectedPlazaId === plazaId) {
+                    document.getElementById('selectedPlazaHeader').innerHTML = '<i class="fas fa-users me-2"></i>Select a Plaza to View Customers';
+                    document.getElementById('selectedPlazaContent').innerHTML = `
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-building fa-3x mb-3"></i>
+                            <p>Click on any plaza from the left to view and manage its customers</p>
+                        </div>
+                    `;
+                    currentSelectedPlazaId = null;
+                }
+                showNotification('Plaza deleted successfully!', 'danger');
+            }
+        }
+
+        // Helper functions
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+            notification.style.zIndex = '9999';
+            notification.style.minWidth = '300px';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
