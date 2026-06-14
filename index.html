@@ -386,13 +386,26 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Internet Plan *</label>
-                                <select class="form-select" id="internetPlan" required>
+                                <select class="form-select" id="internetPlan" required onchange="toggleCustomPlan(this.value)">
                                     <option value="">Select Plan</option>
                                     <option value="Basic 10Mbps - ₦10,000">Basic 10Mbps - ₦10,000</option>
                                     <option value="Standard 25Mbps - ₦20,000">Standard 25Mbps - ₦20,000</option>
                                     <option value="Premium 50Mbps - ₦35,000">Premium 50Mbps - ₦35,000</option>
                                     <option value="Ultimate 100Mbps - ₦50,000">Ultimate 100Mbps - ₦50,000</option>
+                                    <option value="custom">Custom Plan</option>
                                 </select>
+                            </div>
+
+                            <!-- custom plan inputs (hidden by default) -->
+                            <div id="customPlanFields" style="display:none;" class="row w-100 gx-2">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Custom Plan Name *</label>
+                                    <input type="text" class="form-control" id="customPlanName" placeholder="e.g., Flex 15Mbps">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Amount (₦) *</label>
+                                    <input type="number" min="0" class="form-control" id="customPlanAmount" placeholder="e.g., 15000">
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Date Connected *</label>
@@ -792,15 +805,45 @@
             modal.show();
         }
 
+        function toggleCustomPlan(value) {
+            const wrapper = document.getElementById('customPlanFields');
+            const name = document.getElementById('customPlanName');
+            const amount = document.getElementById('customPlanAmount');
+            if (value === 'custom') {
+                wrapper.style.display = '';
+                name.required = true;
+                amount.required = true;
+            } else {
+                wrapper.style.display = 'none';
+                name.required = false;
+                amount.required = false;
+                name.value = '';
+                amount.value = '';
+            }
+        }
+
         document.getElementById('customerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const plazaId = parseInt(document.getElementById('currentPlazaId').value, 10);
+            const internetPlanValue = document.getElementById('internetPlan').value;
+            let planString = internetPlanValue;
+
+            if (internetPlanValue === 'custom') {
+                const customName = document.getElementById('customPlanName').value.trim();
+                const customAmount = document.getElementById('customPlanAmount').value.trim();
+                if (!customName || !customAmount) {
+                    showNotification('Please provide custom plan name and amount', 'danger');
+                    return;
+                }
+                planString = `${customName} - ₦${Number(customAmount).toLocaleString()}`;
+            }
+
             const customerData = {
                 name: document.getElementById('customerName').value,
                 shop_number: document.getElementById('shopNumber').value,
                 phone: document.getElementById('customerPhone').value,
-                plan: document.getElementById('internetPlan').value,
+                plan: planString,
                 connect_date: document.getElementById('dateConnect').value,
                 due_date: document.getElementById('dueDate').value,
                 status: document.getElementById('status').value
@@ -819,7 +862,7 @@
                 selectPlaza(plazaId);
                 bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
             } catch (error) {
-                showNotification('Unable to save customer: ' + error.message, 'danger');
+                showNotification('Unable to save customer: ' + (error.message || error), 'danger');
             }
         });
 
@@ -836,7 +879,26 @@
             document.getElementById('customerName').value = customer.name;
             document.getElementById('shopNumber').value = customer.shopNumber;
             document.getElementById('customerPhone').value = customer.phone;
-            document.getElementById('internetPlan').value = customer.plan;
+
+            const knownPlans = [
+                'Basic 10Mbps - ₦10,000',
+                'Standard 25Mbps - ₦20,000',
+                'Premium 50Mbps - ₦35,000',
+                'Ultimate 100Mbps - ₦50,000'
+            ];
+
+            if (knownPlans.includes(customer.plan)) {
+                document.getElementById('internetPlan').value = customer.plan;
+                toggleCustomPlan(customer.plan);
+            } else {
+                // treat as custom; try to split "Name - ₦amount"
+                document.getElementById('internetPlan').value = 'custom';
+                const parts = (customer.plan || '').split(' - ₦');
+                document.getElementById('customPlanName').value = parts[0] || '';
+                document.getElementById('customPlanAmount').value = parts[1] ? parts[1].replace(/,/g, '') : '';
+                toggleCustomPlan('custom');
+            }
+
             document.getElementById('dateConnect').value = customer.connectDate;
             document.getElementById('dueDate').value = customer.dueDate;
             document.getElementById('status').value = customer.status;
@@ -969,6 +1031,23 @@
         }
 
         loadData();
+
+        function toggleCustomPlan(value) {
+            const wrapper = document.getElementById('customPlanFields');
+            const name = document.getElementById('customPlanName');
+            const amount = document.getElementById('customPlanAmount');
+            if (value === 'custom') {
+                wrapper.style.display = '';
+                name.required = true;
+                amount.required = true;
+            } else {
+                wrapper.style.display = 'none';
+                name.required = false;
+                amount.required = false;
+                name.value = '';
+                amount.value = '';
+            }
+        }
     </script>
 </body>
 </html>
