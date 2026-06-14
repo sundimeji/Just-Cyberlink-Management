@@ -327,7 +327,7 @@
                     <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
                         <i class="fas fa-store me-2"></i>
                         All Plazas
-                        <button class="btn btn-sm btn-light float-end" onclick="showAddPlazaModal()" style="border-radius: 20px;">
+                        <button id="addPlazaBtn" class="btn btn-sm btn-light float-end" style="border-radius: 20px;">
                             <i class="fas fa-plus"></i> Add Plaza
                         </button>
                     </div>
@@ -448,74 +448,203 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
     <script>
-        // Data structure: Plazas array with customers
+        const SUPABASE_URL = 'https://vxfjtrzsjwzhyuevbjxu.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_hokA0MBTPZLM-1rY7zmA2w_7z3nj1B9';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         let plazas = [];
         let currentSelectedPlazaId = null;
         let editCustomerIndex = -1;
+        let editCustomerId = null;
 
-        // Load data from localStorage
-        function loadData() {
+        async function loadData() {
             const stored = localStorage.getItem('ispPlazasData');
-            if (stored) {
-                plazas = JSON.parse(stored);
-            } else {
-                // Sample data
-                plazas = [
-                    {
-                        id: 1,
-                        name: "City Mall",
-                        location: "Downtown",
-                        customers: [
-                            {
-                                name: "John Doe",
-                                shopNumber: "A12",
-                                phone: "08012345678",
-                                plan: "Premium 50Mbps - ₦35,000",
-                                connectDate: "2024-01-15",
-                                dueDate: "2024-02-15",
-                                status: "Active"
-                            },
-                            {
-                                name: "Jane Smith",
-                                shopNumber: "B45",
-                                phone: "08087654321",
-                                plan: "Standard 25Mbps - ₦20,000",
-                                connectDate: "2024-01-10",
-                                dueDate: "2024-02-10",
-                                status: "Active"
-                            }
-                        ]
-                    },
-                    {
-                        id: 2,
-                        name: "Plaza Hub",
-                        location: "Business District",
-                        customers: [
-                            {
-                                name: "Mike Johnson",
-                                shopNumber: "C78",
-                                phone: "08098765432",
-                                plan: "Ultimate 100Mbps - ₦50,000",
-                                connectDate: "2023-12-20",
-                                dueDate: "2024-01-20",
-                                status: "Pending"
-                            }
-                        ]
-                    }
-                ];
-                saveData();
+            try {
+                const { data, error } = await supabaseClient
+                    .from('plazas')
+                    .select(`
+                        id,
+                        name,
+                        location,
+                        customers(
+                            id,
+                            plaza_id,
+                            name,
+                            shop_number,
+                            phone,
+                            plan,
+                            connect_date,
+                            due_date,
+                            status
+                        )
+                    `)
+                    .order('id', { ascending: true });
+
+                if (error) throw error;
+
+                plazas = data.map(plaza => ({
+                    id: plaza.id,
+                    name: plaza.name,
+                    location: plaza.location,
+                    customers: (plaza.customers || []).map(customer => ({
+                        id: customer.id,
+                        name: customer.name,
+                        shopNumber: customer.shop_number,
+                        phone: customer.phone,
+                        plan: customer.plan,
+                        connectDate: customer.connect_date,
+                        dueDate: customer.due_date,
+                        status: customer.status
+                    }))
+                }));
+            } catch (error) {
+                if (stored) {
+                    plazas = JSON.parse(stored);
+                    showNotification('Supabase unavailable. Loaded local cached data.', 'warning');
+                } else {
+                    plazas = [];
+                    saveData();
+                }
             }
+
             renderPlazaList();
             updateGlobalStats();
+            if (currentSelectedPlazaId) selectPlaza(currentSelectedPlazaId);
         }
 
-        // Save data to localStorage
+        async function savePlaza(name, location) {
+            try {
+                console.log('Attempting to save plaza:', { name, location });
+                const { data, error } = await supabaseClient
+                    .from('plazas')
+                    .insert([{ name: name.trim(), location: location.trim() }])
+                    .select();
+
+                console.log('Response:', { data, error });
+
+                if (error) {
+                    console.error('Supabase insert error:', error);
+                    throw new Error(`Database Error: ${error.message || error.details || JSON.stringify(error)}`);
+                }
+
+                if (!data || data.length === 0) {
+                    throw new Error('No data returned from insert');
+                }
+
+                console.log('Plaza saved successfully:', data);
+                const newPlaza = Array.isArray(data) ? data[0] : data;
+                
+                plazas.push({
+                    id: newPlaza.id,
+                    name: newPlaza.name,
+                    location: newPlaza.location,
+                    customers: []
+                });
+                saveData();
+                console.log('Plaza added to local array:', plazas);
+            } catch (error) {
+                console.error('Error in savePlaza:', error);
+                throw error;
+            }
+        }
+
+        async function saveCustomer(plazaId, customerData) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('customers')
+                    .insert([{ plaza_id: plazaId, ...customerData }])
+                    .select();
+
+                if (error) throw error;
+
+                const newCustomer = Array.isArray(data) ? data[0] : data;
+                
+                const plaza = plazas.find(p => p.id === plazaId);
+                if (plaza) {
+                    plaza.customers.push({
+                        id: newCustomer.id,
+                        name: newCustomer.name,
+                        shopNumber: newCustomer.shop_number,
+                        phone: newCustomer.phone,
+                        plan: newCustomer.plan,
+                        connectDate: newCustomer.connect_date,
+                        dueDate: newCustomer.due_date,
+                        status: newCustomer.status
+                    });
+                }
+                saveData();
+            } catch (error) {
+                console.error('Error saving customer:', error);
+                throw error;
+            }
+        }
+
+        async function updateCustomer(customerId, customerData) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('customers')
+                    .update(customerData)
+                    .eq('id', customerId)
+                    .select();
+
+                if (error) throw error;
+
+                const updatedCustomer = Array.isArray(data) ? data[0] : data;
+                
+                plazas.forEach(plaza => {
+                    const customer = plaza.customers.find(c => c.id === customerId);
+                    if (customer) {
+                        customer.name = updatedCustomer.name;
+                        customer.shopNumber = updatedCustomer.shop_number;
+                        customer.phone = updatedCustomer.phone;
+                        customer.plan = updatedCustomer.plan;
+                        customer.connectDate = updatedCustomer.connect_date;
+                        customer.dueDate = updatedCustomer.due_date;
+                        customer.status = updatedCustomer.status;
+                    }
+                });
+                saveData();
+            } catch (error) {
+                console.error('Error updating customer:', error);
+                throw error;
+            }
+        }
+
+        async function deleteCustomer(customerId) {
+            const { error } = await supabaseClient
+                .from('customers')
+                .delete()
+                .eq('id', customerId);
+
+            if (error) throw error;
+
+            plazas.forEach(plaza => {
+                plaza.customers = plaza.customers.filter(c => c.id !== customerId);
+            });
+            saveData();
+        }
+
+        async function deletePlazaFromBackend(plazaId) {
+            const { error: errorCustomers } = await supabaseClient
+                .from('customers')
+                .delete()
+                .eq('plaza_id', plazaId);
+
+            const { error: errorPlaza } = await supabaseClient
+                .from('plazas')
+                .delete()
+                .eq('id', plazaId);
+
+            if (errorCustomers) throw errorCustomers;
+            if (errorPlaza) throw errorPlaza;
+        }
+
         function saveData() {
             localStorage.setItem('ispPlazasData', JSON.stringify(plazas));
         }
 
-        // Update global statistics
         function updateGlobalStats() {
             const totalPlazas = plazas.length;
             let totalCustomers = 0;
@@ -539,7 +668,6 @@
             document.getElementById('totalRevenue').textContent = '₦' + totalRevenue.toLocaleString();
         }
 
-        // Render plaza list
         function renderPlazaList() {
             const plazaListDiv = document.getElementById('plazaList');
             if (plazas.length === 0) {
@@ -580,13 +708,11 @@
             `).join('');
         }
 
-        // Select a plaza and show its customers
         function selectPlaza(plazaId) {
             currentSelectedPlazaId = plazaId;
             const plaza = plazas.find(p => p.id === plazaId);
             if (!plaza) return;
 
-            // Update header
             document.getElementById('selectedPlazaHeader').innerHTML = `
                 <i class="fas fa-store me-2"></i>
                 ${escapeHtml(plaza.name)} - Customer Records
@@ -595,7 +721,6 @@
                 </button>
             `;
 
-            // Render customers table
             if (plaza.customers.length === 0) {
                 document.getElementById('selectedPlazaContent').innerHTML = `
                     <div class="text-center text-muted py-5">
@@ -657,55 +782,56 @@
             `;
         }
 
-        // Show add customer modal
         function showAddCustomerModal(plazaId) {
             currentSelectedPlazaId = plazaId;
             document.getElementById('currentPlazaId').value = plazaId;
             document.getElementById('customerForm').reset();
             editCustomerIndex = -1;
+            editCustomerId = null;
             const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
             modal.show();
         }
 
-        // Add/Edit customer
-        document.getElementById('customerForm').addEventListener('submit', function(e) {
+        document.getElementById('customerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const plazaId = parseInt(document.getElementById('currentPlazaId').value);
-            const plaza = plazas.find(p => p.id === plazaId);
-            
+
+            const plazaId = parseInt(document.getElementById('currentPlazaId').value, 10);
             const customerData = {
                 name: document.getElementById('customerName').value,
-                shopNumber: document.getElementById('shopNumber').value,
+                shop_number: document.getElementById('shopNumber').value,
                 phone: document.getElementById('customerPhone').value,
                 plan: document.getElementById('internetPlan').value,
-                connectDate: document.getElementById('dateConnect').value,
-                dueDate: document.getElementById('dueDate').value,
+                connect_date: document.getElementById('dateConnect').value,
+                due_date: document.getElementById('dueDate').value,
                 status: document.getElementById('status').value
             };
 
-            if (editCustomerIndex === -1) {
-                plaza.customers.push(customerData);
-                showNotification('Customer added successfully!', 'success');
-            } else {
-                plaza.customers[editCustomerIndex] = customerData;
-                editCustomerIndex = -1;
-                showNotification('Customer updated successfully!', 'success');
-            }
+            try {
+                if (editCustomerId === null) {
+                    await saveCustomer(plazaId, customerData);
+                    showNotification('Customer added successfully!', 'success');
+                } else {
+                    await updateCustomer(editCustomerId, customerData);
+                    showNotification('Customer updated successfully!', 'success');
+                }
 
-            saveData();
-            updateGlobalStats();
-            renderPlazaList();
-            selectPlaza(plazaId);
-            
-            bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
+                await loadData();
+                selectPlaza(plazaId);
+                bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
+            } catch (error) {
+                showNotification('Unable to save customer: ' + error.message, 'danger');
+            }
         });
 
-        // Edit customer in plaza
         function editCustomerInPlaza(plazaId, customerIndex) {
             const plaza = plazas.find(p => p.id === plazaId);
             const customer = plaza.customers[customerIndex];
-            
+            if (!customer) return;
+
+            currentSelectedPlazaId = plazaId;
+            editCustomerId = customer.id;
+            editCustomerIndex = customerIndex;
+
             document.getElementById('currentPlazaId').value = plazaId;
             document.getElementById('customerName').value = customer.name;
             document.getElementById('shopNumber').value = customer.shopNumber;
@@ -714,58 +840,89 @@
             document.getElementById('dateConnect').value = customer.connectDate;
             document.getElementById('dueDate').value = customer.dueDate;
             document.getElementById('status').value = customer.status;
-            
-            editCustomerIndex = customerIndex;
+
             const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
             modal.show();
         }
 
-        // Delete customer from plaza
-        function deleteCustomerFromPlaza(plazaId, customerIndex) {
-            if (confirm('Are you sure you want to delete this customer?')) {
-                const plaza = plazas.find(p => p.id === plazaId);
-                plaza.customers.splice(customerIndex, 1);
-                saveData();
-                updateGlobalStats();
-                renderPlazaList();
+        async function deleteCustomerFromPlaza(plazaId, customerIndex) {
+            const plaza = plazas.find(p => p.id === plazaId);
+            if (!plaza) return;
+            const customer = plaza.customers[customerIndex];
+            if (!customer) return;
+
+            if (!confirm('Are you sure you want to delete this customer?')) return;
+
+            try {
+                await deleteCustomer(customer.id);
+                await loadData();
                 selectPlaza(plazaId);
                 showNotification('Customer deleted successfully!', 'danger');
+            } catch (error) {
+                showNotification('Unable to delete customer: ' + error.message, 'danger');
             }
         }
 
-        // Plaza management
+        // remove the DOMContentLoaded block and the duplicate showAddPlazaModal definition
+        // replaced with a single immediate handler so button works even if DOMContentLoaded already fired
+        // (keeps existing showAddPlazaModal logic)
         function showAddPlazaModal() {
             document.getElementById('plazaForm').reset();
-            const modal = new bootstrap.Modal(document.getElementById('addPlazaModal'));
-            modal.show();
+            editCustomerId = null;
+            const modalEl = document.getElementById('addPlazaModal');
+            if (!modalEl) { console.error('addPlazaModal element not found'); return; }
+            new bootstrap.Modal(modalEl).show();
         }
 
-        document.getElementById('plazaForm').addEventListener('submit', function(e) {
+        // attach click handler immediately (script runs after DOM so elements exist)
+        (function attachAddPlazaHandler() {
+            const addBtn = document.getElementById('addPlazaBtn');
+            if (!addBtn) {
+                console.warn('addPlazaBtn not found');
+                return;
+            }
+            addBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showAddPlazaModal();
+            });
+        })();
+        
+        document.getElementById('plazaForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const newPlaza = {
-                id: Date.now(),
-                name: document.getElementById('plazaName').value,
-                location: document.getElementById('plazaLocation').value,
-                customers: []
-            };
-            
-            plazas.push(newPlaza);
-            saveData();
-            updateGlobalStats();
-            renderPlazaList();
-            
-            bootstrap.Modal.getInstance(document.getElementById('addPlazaModal')).hide();
-            showNotification('Plaza created successfully!', 'success');
-        });
+            console.log('Plaza form submitted');
 
-        function deletePlaza(plazaId) {
-            if (confirm('Are you sure you want to delete this plaza and all its customers?')) {
+            const name = document.getElementById('plazaName').value;
+            const location = document.getElementById('plazaLocation').value;
+
+            console.log('Form data:', { name, location });
+
+            if (!name.trim()) {
+                showNotification('Plaza name is required!', 'danger');
+                return;
+            }
+
+            try {
+                await savePlaza(name, location);
+                await loadData();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addPlazaModal'));
+                if (modal) modal.hide();
+                showNotification('Plaza created successfully!', 'success');
+            } catch (error) {
+                console.error('Full error details:', error);
+                showNotification('Unable to create plaza: ' + (error.message || error), 'danger');
+            }
+        });
+        
+        async function deletePlaza(plazaId) {
+            if (!confirm('Are you sure you want to delete this plaza and all its customers?')) return;
+
+            try {
+                await deletePlazaFromBackend(plazaId);
                 plazas = plazas.filter(p => p.id !== plazaId);
                 saveData();
                 updateGlobalStats();
                 renderPlazaList();
-                
+
                 if (currentSelectedPlazaId === plazaId) {
                     document.getElementById('selectedPlazaHeader').innerHTML = '<i class="fas fa-users me-2"></i>Select a Plaza to View Customers';
                     document.getElementById('selectedPlazaContent').innerHTML = `
@@ -777,10 +934,11 @@
                     currentSelectedPlazaId = null;
                 }
                 showNotification('Plaza deleted successfully!', 'danger');
+            } catch (error) {
+                showNotification('Unable to delete plaza: ' + error.message, 'danger');
             }
         }
 
-        // Helper functions
         function escapeHtml(str) {
             if (!str) return '';
             return String(str).replace(/[&<>]/g, function(m) {
@@ -810,7 +968,6 @@
             setTimeout(() => notification.remove(), 3000);
         }
 
-        // Initialize
         loadData();
     </script>
 </body>
