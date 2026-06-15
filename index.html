@@ -203,6 +203,11 @@
             max-height: 100%;
         }
 
+        .plaza-dropdown-menu {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
         .table-responsive {
             overflow-x: auto;
         }
@@ -327,7 +332,7 @@
                     <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
                         <i class="fas fa-store me-2"></i>
                         All Plazas
-                        <button id="addPlazaBtn" class="btn btn-sm btn-light float-end" style="border-radius: 20px;">
+                        <button id="addPlazaBtn" class="btn btn-sm btn-light float-end" style="border-radius: 20px;" onclick="showAddPlazaModal()">
                             <i class="fas fa-plus"></i> Add Plaza
                         </button>
                     </div>
@@ -683,6 +688,8 @@
 
         function renderPlazaList() {
             const plazaListDiv = document.getElementById('plazaList');
+            if (!plazaListDiv) return;
+
             if (plazas.length === 0) {
                 plazaListDiv.innerHTML = `
                     <div class="text-center text-muted py-4">
@@ -696,7 +703,11 @@
                 return;
             }
 
-            plazaListDiv.innerHTML = plazas.map(plaza => `
+            const sortedPlazas = [...plazas].sort((a, b) =>
+                a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+            );
+
+            plazaListDiv.innerHTML = sortedPlazas.map(plaza => `
                 <div class="card mb-3 plaza-card" onclick="selectPlaza(${plaza.id})" style="cursor: pointer;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
@@ -711,7 +722,7 @@
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deletePlaza(${plaza.id})">
+                                <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deletePlaza(${plaza.id});">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -764,12 +775,11 @@
                         </thead>
                         <tbody>
                             ${plaza.customers.map((customer, idx) => {
-                                const statusClass = customer.status === 'Active' ? 'badge-active' : 
-                                                   (customer.status === 'Pending' ? 'badge-pending' : 'badge-inactive');
+                                const statusClass = customer.status === 'Active' ? 'badge-active' :
+                                    (customer.status === 'Pending' ? 'badge-pending' : 'badge-inactive');
                                 const dueDate = new Date(customer.dueDate);
                                 const today = new Date();
                                 const isOverdue = dueDate < today && customer.status === 'Active';
-                                
                                 return `
                                     <tr>
                                         <td><strong>${escapeHtml(customer.name)}</strong></td>
@@ -781,10 +791,12 @@
                                             ${formatDate(customer.dueDate)}
                                             ${isOverdue ? '<i class="fas fa-exclamation-triangle ms-1" title="Overdue"></i>' : ''}
                                         </td>
-                                        <td><span class="${statusClass}">${customer.status}</span></td>
+                                        <td>
+                                            <span class="badge ${statusClass}">${escapeHtml(customer.status)}</span>
+                                        </td>
                                         <td class="action-buttons">
-                                            <i class="fas fa-edit" onclick="editCustomerInPlaza(${plazaId}, ${idx})" title="Edit"></i>
-                                            <i class="fas fa-trash" onclick="deleteCustomerFromPlaza(${plazaId}, ${idx})" title="Delete"></i>
+                                            <i class="fas fa-edit" onclick="event.stopPropagation(); editCustomer(${customer.id})" title="Edit Customer"></i>
+                                            <i class="fas fa-trash" onclick="event.stopPropagation(); deleteCustomer(${customer.id})" title="Delete Customer"></i>
                                         </td>
                                     </tr>
                                 `;
@@ -795,32 +807,34 @@
             `;
         }
 
-        function showAddCustomerModal(plazaId) {
-            currentSelectedPlazaId = plazaId;
-            document.getElementById('currentPlazaId').value = plazaId;
-            document.getElementById('customerForm').reset();
-            editCustomerIndex = -1;
-            editCustomerId = null;
-            const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
-            modal.show();
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        function toggleCustomPlan(value) {
-            const wrapper = document.getElementById('customPlanFields');
-            const name = document.getElementById('customPlanName');
-            const amount = document.getElementById('customPlanAmount');
-            if (value === 'custom') {
-                wrapper.style.display = '';
-                name.required = true;
-                amount.required = true;
-            } else {
-                wrapper.style.display = 'none';
-                name.required = false;
-                amount.required = false;
-                name.value = '';
-                amount.value = '';
-            }
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            return new Date(dateString).toLocaleDateString('en-GB', options);
         }
+
+        document.getElementById('plazaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('plazaName').value;
+            const location = document.getElementById('plazaLocation').value;
+
+            try {
+                await savePlaza(name, location);
+                $('#addPlazaModal').modal('hide');
+                showNotification('Plaza added successfully!', 'success');
+                loadData();
+            } catch (error) {
+                showNotification(error.message, 'danger');
+            }
+        });
 
         document.getElementById('customerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -907,130 +921,26 @@
             modal.show();
         }
 
-        async function deleteCustomerFromPlaza(plazaId, customerIndex) {
-            const plaza = plazas.find(p => p.id === plazaId);
-            if (!plaza) return;
-            const customer = plaza.customers[customerIndex];
-            if (!customer) return;
-
-            if (!confirm('Are you sure you want to delete this customer?')) return;
-
-            try {
-                await deleteCustomer(customer.id);
-                await loadData();
-                selectPlaza(plazaId);
-                showNotification('Customer deleted successfully!', 'danger');
-            } catch (error) {
-                showNotification('Unable to delete customer: ' + error.message, 'danger');
-            }
-        }
-
-        // remove the DOMContentLoaded block and the duplicate showAddPlazaModal definition
-        // replaced with a single immediate handler so button works even if DOMContentLoaded already fired
-        // (keeps existing showAddPlazaModal logic)
         function showAddPlazaModal() {
             document.getElementById('plazaForm').reset();
-            editCustomerId = null;
             const modalEl = document.getElementById('addPlazaModal');
-            if (!modalEl) { console.error('addPlazaModal element not found'); return; }
-            new bootstrap.Modal(modalEl).show();
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
         }
 
-        // attach click handler immediately (script runs after DOM so elements exist)
-        (function attachAddPlazaHandler() {
-            const addBtn = document.getElementById('addPlazaBtn');
-            if (!addBtn) {
-                console.warn('addPlazaBtn not found');
-                return;
-            }
-            addBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showAddPlazaModal();
-            });
-        })();
-        
-        document.getElementById('plazaForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            console.log('Plaza form submitted');
-
-            const name = document.getElementById('plazaName').value;
-            const location = document.getElementById('plazaLocation').value;
-
-            console.log('Form data:', { name, location });
-
-            if (!name.trim()) {
-                showNotification('Plaza name is required!', 'danger');
-                return;
-            }
-
-            try {
-                await savePlaza(name, location);
-                await loadData();
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addPlazaModal'));
-                if (modal) modal.hide();
-                showNotification('Plaza created successfully!', 'success');
-            } catch (error) {
-                console.error('Full error details:', error);
-                showNotification('Unable to create plaza: ' + (error.message || error), 'danger');
-            }
-        });
-        
-        async function deletePlaza(plazaId) {
-            if (!confirm('Are you sure you want to delete this plaza and all its customers?')) return;
-
-            try {
-                await deletePlazaFromBackend(plazaId);
-                plazas = plazas.filter(p => p.id !== plazaId);
-                saveData();
-                updateGlobalStats();
-                renderPlazaList();
-
-                if (currentSelectedPlazaId === plazaId) {
-                    document.getElementById('selectedPlazaHeader').innerHTML = '<i class="fas fa-users me-2"></i>Select a Plaza to View Customers';
-                    document.getElementById('selectedPlazaContent').innerHTML = `
-                        <div class="text-center text-muted py-5">
-                            <i class="fas fa-building fa-3x mb-3"></i>
-                            <p>Click on any plaza from the left to view and manage its customers</p>
-                        </div>
-                    `;
-                    currentSelectedPlazaId = null;
-                }
-                showNotification('Plaza deleted successfully!', 'danger');
-            } catch (error) {
-                showNotification('Unable to delete plaza: ' + error.message, 'danger');
-            }
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-GB');
-        }
-
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
-            notification.style.zIndex = '9999';
-            notification.style.minWidth = '300px';
-            notification.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        function showAddCustomerModal(plazaId) {
+            currentSelectedPlazaId = plazaId;
+            editCustomerId = null;
+            document.getElementById('customerForm').reset();
+            document.getElementById('currentPlazaId').value = plazaId;
+            document.getElementById('selectedPlazaHeader').innerHTML = `
+                <i class="fas fa-store me-2"></i>
+                ${escapeHtml(plazas.find(p => p.id === plazaId).name)} - Add New Customer
             `;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
+            const modalEl = document.getElementById('addCustomerModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
         }
-
-        loadData();
 
         function toggleCustomPlan(value) {
             const wrapper = document.getElementById('customPlanFields');
@@ -1048,6 +958,77 @@
                 amount.value = '';
             }
         }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-dismissible fade show alert-${type}`;
+            notification.role = 'alert';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 150);
+            }, 3000);
+        }
+
+        function editCustomer(customerId) {
+            editCustomerId = customerId;
+            const customer = plazas.flatMap(p => p.customers).find(c => c.id === customerId);
+            if (!customer) return;
+
+            document.getElementById('customerName').value = customer.name;
+            document.getElementById('shopNumber').value = customer.shopNumber;
+            document.getElementById('customerPhone').value = customer.phone;
+            document.getElementById('internetPlan').value = customer.plan;
+            document.getElementById('dateConnect').value = customer.connectDate.split('T')[0];
+            document.getElementById('dueDate').value = customer.dueDate.split('T')[0];
+            document.getElementById('status').value = customer.status;
+
+            if (customer.plan.includes('Flex')) {
+                document.getElementById('customPlanName').value = customer.plan;
+                document.getElementById('customPlanAmount').value = '';
+                document.getElementById('internetPlan').value = 'custom';
+                toggleCustomPlan('custom');
+            } else {
+                document.getElementById('customPlanName').value = '';
+                document.getElementById('customPlanAmount').value = '';
+                document.getElementById('internetPlan').value = customer.plan;
+                toggleCustomPlan(customer.plan);
+            }
+
+            $('#addCustomerModal').modal('show');
+        }
+
+        async function deleteCustomer(customerId) {
+            if (!confirm('Are you sure you want to delete this customer?')) return;
+
+            try {
+                await deleteCustomer(customerId);
+                showNotification('Customer deleted successfully!', 'success');
+                loadData();
+            } catch (error) {
+                showNotification(error.message, 'danger');
+            }
+        }
+
+        async function deletePlaza(plazaId) {
+            if (!confirm('Are you sure you want to delete this plaza and all its customers?')) return;
+
+            try {
+                await deletePlazaFromBackend(plazaId);
+                showNotification('Plaza deleted successfully!', 'success');
+                loadData();
+            } catch (error) {
+                showNotification(error.message, 'danger');
+            }
+        }
+
+        loadData();
     </script>
 </body>
 </html>
